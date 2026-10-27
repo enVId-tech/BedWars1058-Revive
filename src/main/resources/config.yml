@@ -1,0 +1,58 @@
+# BedWars1058-Revive configuration
+# Color codes use '&'. Placeholders: {player} {team} {arena} {arenas} {teams}
+
+# Bed behaviour when the player does not say "bed" or "nobed" explicitly.
+bed-by-default: false
+
+# Players that are not in any game may use /revive to join a running game.
+# (They still need the bwrevive.outsider permission.)
+allow-outsiders: true
+
+# Players that are alive on a team may use /revive to change teams.
+allow-team-switch: true
+
+# Announce joins/revives to everyone in the arena.
+broadcast: true
+
+# If a team never had a player this game (so BedWars1058 skipped its shop/upgrade NPCs)
+# spawn the NPCs when someone joins it.
+spawn-npcs-for-empty-team: true
+
+# Re-apply BedWars1058's team bed colour after restoring a bed.
+recolor-bed: true
+
+# Print extra diagnostics to the console.
+debug: false
+
+messages:
+  prefix: "&8[&cRevive&8] &7"
+  player-only: "&cOnly players can use this command."
+  no-permission: "&cYou don't have permission to do that."
+  usage: "&eUsage: &f/revive <team> [bed|nobed] [arena] &7- or &f/revive teams [arena]"
+  reloaded: "Configuration reloaded."
+  no-arena: "You are not in a game. Specify one: &f/revive <team> [bed|nobed] <arena> &7(running: &f{arenas}&7)"
+  unknown-arena: "&cNo arena called &f{arena}&c."
+  arena-not-playing: "&cThat game isn't running yet (or has already ended)."
+  unknown-team: "&cUnknown team. Teams: &f{teams}"
+  in-other-arena: "&cYou are in a different game. Leave it first."
+  outsiders-disabled: "&cJoining a game you were not part of is disabled."
+  no-outsider-permission: "&cYou don't have permission to join a game you were not part of."
+  switch-disabled: "&cYou can't switch teams while alive."
+  respawning: "&cYou are already respawning, hold on."
+  already-on-team: "&cYou are already alive on that team."
+  spectate-failed: "&cThe game refused to let you in."
+  internal-error: "&cSomething went wrong. Please tell an administrator."
+  bed-no-permission: "&eYou lack the permission to restore beds, so you joined without one."
+  bed-intact: "&7(That team's bed is still intact.)"
+  bed-restored: "&aThe team's bed has been restored."
+  bed-no-snapshot: "&eThe bed could not be restored (no record of it from the start of the match)."
+  bed-failed: "&eThe bed could not be restored."
+  revived: "&aYou joined team {team}&a."
+  switched: "&aYou switched to team {team}&a."
+  bed-only: "&aBed restored for team {team}&a."
+  broadcast-revived: "&e{player} &7joined team {team}&7."
+  broadcast-switched: "&e{player} &7switched to team {team}&7."
+  team-line: "{team}&7: &f{members} player(s) &7- bed {bed}"
+  bed-alive: "&aalive"
+  bed-dead: "&cdestroyed"
+  teams-header: "&7Teams in &f{arena}&7:"

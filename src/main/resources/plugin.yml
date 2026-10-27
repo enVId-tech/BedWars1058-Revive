@@ -1,0 +1,35 @@
+name: BedWars1058-Revive
+version: ${version}
+main: dev.etran.bedwarsrevive.BedWarsRevive
+api-version: '1.13'
+description: Let players (re)join a running BedWars1058 game on any team, with an optional bed restore.
+authors: [etran]
+depend: [BedWars1058]
+
+commands:
+  revive:
+    description: Revive / join a running BedWars game on any team.
+    usage: /<command> <team> [bed|nobed] [arena]
+    aliases: [bwrevive]
+
+permissions:
+  bwrevive.use:
+    description: Use /revive on a team.
+    default: op
+  bwrevive.outsider:
+    description: Use /revive to join a game you were never part of.
+    default: op
+  bwrevive.bed:
+    description: Choose to have the team's bed restored when reviving.
+    default: op
+  bwrevive.admin:
+    description: Reload the plugin configuration.
+    default: op
+  bwrevive.*:
+    description: All BedWars1058-Revive permissions.
+    default: op
+    children:
+      bwrevive.use: true
+      bwrevive.outsider: true
+      bwrevive.bed: true
+      bwrevive.admin: true

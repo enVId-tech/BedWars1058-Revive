@@ -48,6 +48,10 @@ is running. `bed`, `set`, `eliminate` and `teams` also work from the console wit
   the start of the match, or the plugin was installed mid-game) a **new bed is built** at the team's
   configured bed location, in the team's colour, with the head on a free neighbouring block closest to
   the team spawn. That layout is then reused for later restores.
+* **A bed needs a player on its team.** `/revive bed <team>` on an empty team puts *you* on that team (with the
+  bed). If you were the last member of your previous team, that team's bed is removed and marked destroyed.
+  `/revive bed` from the console refuses on an empty team. Eliminating a team's last member also destroys its
+  bed, even an intact one.
 * **Eliminate** removes the player from their team, makes them a dead spectator and re-checks the
   win condition, so eliminating the last member of a bedless team ends that team like a normal death.
 

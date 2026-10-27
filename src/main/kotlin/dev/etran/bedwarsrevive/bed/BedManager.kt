@@ -116,6 +116,17 @@ class BedManager(private val plugin: BedWarsRevive) : Listener {
         }
     }
 
+    /** Removes the team's bed blocks from the map (both halves). Does not touch the team's bed flag. */
+    fun remove(team: ITeam) {
+        val block = team.bed?.block ?: return
+        val first = adapter.read(block) ?: return
+        val partnerFace = if (first.isHead) first.facing.oppositeFace else first.facing
+        val partner = block.getRelative(partnerFace)
+        val partnerIsBed = adapter.read(partner) != null
+        block.type = Material.AIR
+        if (partnerIsBed) partner.type = Material.AIR
+    }
+
     /**
      * Designs a bed for a team that has no snapshot: the configured bed block is the foot, the head
      * goes on the neighbouring block that is free, has ground under it and is closest to the team spawn.

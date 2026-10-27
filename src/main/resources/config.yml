@@ -55,6 +55,7 @@ messages:
   bed-recreated: "&aThe bed of team {team}&a has been recreated."
   bed-already-intact: "&7The bed of team {team}&7 is already intact."
   bed-other-no-permission: "&cYou can only recreate your own team's bed."
+  bed-team-empty: "&cTeam {team}&c has nobody on it, and a bed needs a player on its team. Use &f/revive set <player> <team> bed&c."
   bed-needs-team: "&cYou are not on a team. Specify one: &f/revive bed <team> [arena]"
   player-not-found: "&cPlayer &f{player}&c is not online."
   target-not-alive: "&cThat player isn't alive in a running game."

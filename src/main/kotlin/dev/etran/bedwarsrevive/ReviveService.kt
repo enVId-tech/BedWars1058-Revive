@@ -55,6 +55,7 @@ class ReviveService(private val plugin: BedWarsRevive) {
     ) {
         val alive: Boolean
         val outsider: Boolean
+        val previousTeam: ITeam? = arena.getTeam(player)
         val bedWanted = wantBed && mayRestoreBed
         var bedOutcome = if (wantBed && !mayRestoreBed) BedOutcome.NO_PERMISSION else BedOutcome.NOT_REQUESTED
 
@@ -109,12 +110,6 @@ class ReviveService(private val plugin: BedWarsRevive) {
                     if (join.isCancelled) throw ReviveFailure("spectate-failed")
                 }
 
-                // ---- bed: done before joining so the player's bed hologram shows the right state
-                if (bedWanted) {
-                    bedOutcome =
-                        if (team.isBedDestroyed) restoreBed(arena, team, force = false) else BedOutcome.ALREADY_INTACT
-                }
-
                 // ---- join the team (NO size check: full teams are allowed on purpose)
                 val neverHadPlayers = team.membersCache.isEmpty()
                 team.addPlayers(player)
@@ -129,6 +124,15 @@ class ReviveService(private val plugin: BedWarsRevive) {
                 }
                 restoreGeneratorsIfNeeded(team)
                 team.firstSpawn(player)
+
+                // ---- bed: needs a member on the team, so it is placed after joining
+                if (bedWanted) {
+                    bedOutcome =
+                        if (team.isBedDestroyed) restoreBed(arena, team, force = false) else BedOutcome.ALREADY_INTACT
+                }
+
+                // ---- a bed can't exist for an empty team: if this player was the last one, the old team dies
+                if (previousTeam != null && previousTeam !== team) destroyBedIfEmpty(arena, previousTeam)
 
                 // ---- the sidebar decides "YOU" when it is built, so give it after joining
                 refreshSidebar(player, arena)
@@ -210,6 +214,7 @@ class ReviveService(private val plugin: BedWarsRevive) {
      */
     fun restoreBed(arena: IArena, team: ITeam, force: Boolean): BedOutcome {
         if (arena.status != GameState.playing) throw ReviveFailure("arena-not-playing")
+        if (team.members.isEmpty()) throw ReviveFailure("bed-team-empty", "team" to team.name)
         if (!force && !team.isBedDestroyed) return BedOutcome.ALREADY_INTACT
         val result = plugin.beds.restore(arena, team)
         return when (result) {
@@ -223,6 +228,18 @@ class ReviveService(private val plugin: BedWarsRevive) {
             }
             BedRestoreResult.NO_SNAPSHOT -> BedOutcome.NO_SNAPSHOT
             BedRestoreResult.FAILED -> BedOutcome.FAILED
+        }
+    }
+
+    /** An empty team must not keep a bed: remove it and mark it destroyed so the game agrees. */
+    private fun destroyBedIfEmpty(arena: IArena, team: ITeam) {
+        if (team.members.isNotEmpty() || team.isBedDestroyed) return
+        try {
+            plugin.beds.remove(team)
+            team.isBedDestroyed = true
+            api.scoreboardManager.refreshPlaceholders(arena)
+        } catch (t: Throwable) {
+            plugin.logger.warning("Could not destroy the bed of the emptied team ${team.name}: $t")
         }
     }
 
@@ -265,7 +282,10 @@ class ReviveService(private val plugin: BedWarsRevive) {
 
         try {
             player.sendMessage(Language.getMsg(player, BwMessages.PLAYER_DIE_ELIMINATED_CHAT))
-            if (team != null && team.members.isEmpty()) announceTeamEliminated(arena, team)
+            if (team != null && team.members.isEmpty()) {
+                destroyBedIfEmpty(arena, team) // "died without a bed", whether or not it had one
+                announceTeamEliminated(arena, team)
+            }
         } catch (t: Throwable) {
             plugin.debug("eliminate announce: $t")
         }

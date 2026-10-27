@@ -86,6 +86,22 @@ class ReviveCommand(private val plugin: BedWarsRevive) : CommandExecutor, TabCom
         if (!any && !isOwnTeam) return msg.send(sender, "bed-other-no-permission")
 
         val label = coloredName(team)
+
+        // A bed needs somebody living on its team. Recreating one for an empty team therefore
+        // moves the requester onto that team (their old team is destroyed if they were its last member).
+        if (team.members.isEmpty()) {
+            if (sender !is Player) return msg.send(sender, "bed-team-empty", "team" to label)
+            if (plugin.api.arenaUtil.getArenaByPlayer(sender) == null) {
+                if (!plugin.config.getBoolean("allow-outsiders", true)) return msg.send(sender, "outsiders-disabled")
+                if (!sender.hasPermission("bwrevive.outsider")) return msg.send(sender, "no-outsider-permission")
+            }
+            perform(
+                actor = sender, target = sender, arena = arena, team = team,
+                wantBed = true, mayBed = true,
+                maySwitch = sender.hasPermission("bwrevive.switch") || any
+            )
+            return
+        }
         try {
             // Admins re-place the bed even when it still stands; everyone else only when it's gone.
             when (plugin.service.restoreBed(arena, team, force = any)) {

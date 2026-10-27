@@ -33,7 +33,8 @@ class ReviveService(private val plugin: BedWarsRevive) {
         arena: IArena,
         team: ITeam,
         wantBed: Boolean,
-        mayRestoreBed: Boolean
+        mayRestoreBed: Boolean,
+        maySwitch: Boolean
     ): ReviveResult {
         if (arena.status != GameState.playing) throw ReviveFailure("arena-not-playing")
         if (arena.teams.none { it === team }) throw ReviveFailure("unknown-team")
@@ -52,14 +53,14 @@ class ReviveService(private val plugin: BedWarsRevive) {
         // ---- alive on this very team: the only thing left to do is the bed.
         if (alive && arena.getTeam(player) === team) {
             if (bedWanted && team.isBedDestroyed) {
-                bedOutcome = restoreBed(arena, team)
+                bedOutcome = restoreBed(arena, team, force = false)
                 return ReviveResult(ReviveKind.BED_ONLY, bedOutcome)
             }
             throw ReviveFailure("already-on-team")
         }
 
         if (alive) {
-            if (!plugin.config.getBoolean("allow-team-switch", true)) throw ReviveFailure("switch-disabled")
+            if (!maySwitch) throw ReviveFailure("switch-disabled")
             if (arena.isReSpawning(player)) throw ReviveFailure("respawning")
         }
 
@@ -81,7 +82,7 @@ class ReviveService(private val plugin: BedWarsRevive) {
 
             // ---- 3. bed: done before joining so the player's bed hologram shows the right state
             if (bedWanted) {
-                bedOutcome = if (team.isBedDestroyed) restoreBed(arena, team) else BedOutcome.ALREADY_INTACT
+                bedOutcome = if (team.isBedDestroyed) restoreBed(arena, team, force = false) else BedOutcome.ALREADY_INTACT
             }
 
             // ---- 4. shop / upgrade NPCs for a team that nobody ever played
@@ -158,8 +159,13 @@ class ReviveService(private val plugin: BedWarsRevive) {
         }
     }
 
-    private fun restoreBed(arena: IArena, team: ITeam): BedOutcome {
-        if (!team.isBedDestroyed) return BedOutcome.ALREADY_INTACT
+    /**
+     * Puts a team's bed back, independent of any player. With [force] the bed is re-placed even if
+     * it still stands (repairs a damaged/overbuilt bed); otherwise an intact bed is left alone.
+     */
+    fun restoreBed(arena: IArena, team: ITeam, force: Boolean): BedOutcome {
+        if (arena.status != GameState.playing) throw ReviveFailure("arena-not-playing")
+        if (!force && !team.isBedDestroyed) return BedOutcome.ALREADY_INTACT
         return when (plugin.beds.restore(arena, team)) {
             BedRestoreResult.RESTORED -> {
                 team.isBedDestroyed = false
@@ -171,6 +177,48 @@ class ReviveService(private val plugin: BedWarsRevive) {
             }
             BedRestoreResult.NO_SNAPSHOT -> BedOutcome.NO_SNAPSHOT
             BedRestoreResult.FAILED -> BedOutcome.FAILED
+        }
+    }
+
+    /**
+     * Turns an alive player into a dead spectator, exactly as if they had died with no bed -
+     * whether or not their team's bed is intact. The bed itself is not touched.
+     */
+    fun eliminate(player: Player, arena: IArena) {
+        if (arena.status != GameState.playing) throw ReviveFailure("arena-not-playing")
+        if (api.arenaUtil.getArenaByPlayer(player) !== arena || !arena.isPlayer(player) || arena.isSpectator(player)) {
+            throw ReviveFailure("target-not-alive")
+        }
+        val oldTeam = arena.getTeam(player)
+        try {
+            arena.respawnSessions.remove(player)
+            detachFromTeams(player, arena)
+            arena.players.remove(player)
+
+            val originalAllow = arena.isAllowSpectate
+            arena.isAllowSpectate = true
+            val ok = try {
+                arena.addSpectator(player, true, null)
+            } finally {
+                arena.isAllowSpectate = originalAllow
+            }
+            if (!ok || !arena.isSpectator(player)) {
+                // Put them back where they were rather than leaving them in limbo.
+                if (!arena.players.contains(player)) arena.players.add(player)
+                oldTeam?.let { if (!it.members.contains(player)) it.members.add(player) }
+                throw ReviveFailure("spectate-failed")
+            }
+            try {
+                arena.checkWinner() // the team may now be eliminated / the game decided
+            } catch (t: Throwable) {
+                plugin.debug("checkWinner: $t")
+            }
+        } catch (failure: ReviveFailure) {
+            throw failure
+        } catch (t: Throwable) {
+            plugin.logger.severe("Eliminating ${player.name} in ${arena.arenaName} failed: $t")
+            t.printStackTrace()
+            throw ReviveFailure("internal-error")
         }
     }
 

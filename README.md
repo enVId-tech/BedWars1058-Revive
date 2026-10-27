@@ -11,21 +11,29 @@ Kotlin 2.2.21 · Gradle · group `dev.etran` · Java 8 bytecode (one jar for eve
 
 | Command | What it does |
 |---|---|
-| `/revive <team> [bed\|nobed] [arena]` | Join / switch to `<team>`. `bed` restores the team's bed, `nobed` doesn't. |
-| `/revive teams [arena]` | Lists the teams, their size and bed state. |
+| `/revive <team> [bed\|nobed] [arena]` | Join or switch to `<team>` yourself. `bed` also restores the team's bed. |
+| `/revive bed [team] [arena]` | Recreate a bed **on its own**, independent of any revival. Defaults to your own team. |
+| `/revive set <player> <team> [bed\|nobed] [arena]` | Admin: put another player on a team (works for dead players and outsiders too). |
+| `/revive eliminate <player>` | Admin: put a player into the dead-spectator role, as if they died without a bed - even if their team's bed is intact. The bed is left alone. |
+| `/revive teams [arena]` | Lists teams, their size and bed state. |
 | `/revive reload` | Reloads `config.yml`. |
 
-Alias: `/bwrevive`. `[arena]` is optional when you are already inside a game, or when only one game is
-running. Tab completion is included.
+Alias: `/bwrevive`. `[arena]` is optional when you (or the target) are inside a game, or when only one game
+is running. `bed`, `set`, `eliminate` and `teams` also work from the console with an explicit arena.
 
 ## Permissions (all default to op)
 
 | Node | Allows |
 |---|---|
-| `bwrevive.use` | Using `/revive` at all |
+| `bwrevive.use` | Using `/revive <team>` and `/revive teams` |
 | `bwrevive.outsider` | Joining a game you were never part of |
-| `bwrevive.bed` | Choosing to restore the bed (without it, the player joins without a bed) |
+| `bwrevive.switch` | Switching teams while **alive** |
+| `bwrevive.bed` | Choosing `bed` on revive, and `/revive bed` for your **own** team's bed (only if it is gone) |
+| `bwrevive.admin.bed` | `/revive bed <any team>` at any time - re-places the bed even if it still stands |
+| `bwrevive.admin.move` | `/revive set` |
+| `bwrevive.admin.eliminate` | `/revive eliminate` |
 | `bwrevive.admin` | `/revive reload` |
+| `bwrevive.*` | Everything above |
 
 ## Behaviour
 
@@ -33,10 +41,13 @@ running. Tab completion is included.
 * **Dead teams are joinable.** The bed stays destroyed unless `bed` was chosen.
 * **Never in the game?** The player is added through BedWars1058 and then moved onto the team.
 * **Dead / spectating?** They are taken out of spectator mode and put on the team.
-* **Alive on another team?** They switch (`allow-team-switch`).
-* **Bed restore** uses a snapshot taken at the start of the match, so the bed returns on the exact
-  blocks, facing and colour it had. If the plugin was installed mid-game, teams whose bed is already
-  broken have no snapshot and are joined without a bed (the player is told).
+* **Alive on another team?** They switch, if they have `bwrevive.switch` (admins using `/revive set` always can).
+* **Beds are independent of players.** `/revive bed` needs no revival, and clears the team's
+  "bed destroyed" state. The bed is rebuilt from a snapshot taken at the start of the match, so it
+  returns on the exact blocks, facing and colour it had. If the plugin was installed mid-game, teams
+  whose bed was already broken have no snapshot (the command says so).
+* **Eliminate** removes the player from their team, makes them a dead spectator and re-checks the
+  win condition, so eliminating the last member of a bedless team ends that team like a normal death.
 
 See `src/main/resources/config.yml` for every option and message.
 

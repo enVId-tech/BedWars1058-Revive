@@ -9,7 +9,7 @@ depend: [BedWars1058]
 commands:
   revive:
     description: Revive / join a running BedWars game on any team.
-    usage: /<command> <team> [bed|nobed] [arena]
+    usage: /<command> <team> [bed|nobed] [arena] | bed | set | eliminate | teams | reload
     aliases: [bwrevive]
 
 permissions:
@@ -22,8 +22,20 @@ permissions:
   bwrevive.bed:
     description: Choose to have the team's bed restored when reviving.
     default: op
+  bwrevive.switch:
+    description: Switch teams with /revive while alive.
+    default: op
   bwrevive.admin:
     description: Reload the plugin configuration.
+    default: op
+  bwrevive.admin.bed:
+    description: Recreate any team's bed at any time (/revive bed <team>).
+    default: op
+  bwrevive.admin.move:
+    description: Put other players on a team (/revive set).
+    default: op
+  bwrevive.admin.eliminate:
+    description: Put a player into the dead-spectator role (/revive eliminate).
     default: op
   bwrevive.*:
     description: All BedWars1058-Revive permissions.
@@ -32,4 +44,8 @@ permissions:
       bwrevive.use: true
       bwrevive.outsider: true
       bwrevive.bed: true
+      bwrevive.switch: true
       bwrevive.admin: true
+      bwrevive.admin.bed: true
+      bwrevive.admin.move: true
+      bwrevive.admin.eliminate: true

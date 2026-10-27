@@ -8,9 +8,6 @@ bed-by-default: false
 # (They still need the bwrevive.outsider permission.)
 allow-outsiders: true
 
-# Players that are alive on a team may use /revive to change teams.
-allow-team-switch: true
-
 # Announce joins/revives to everyone in the arena.
 broadcast: true
 
@@ -28,7 +25,7 @@ messages:
   prefix: "&8[&cRevive&8] &7"
   player-only: "&cOnly players can use this command."
   no-permission: "&cYou don't have permission to do that."
-  usage: "&eUsage: &f/revive <team> [bed|nobed] [arena] &7- or &f/revive teams [arena]"
+  usage: "&eUsage: &f/revive <team> [bed|nobed] [arena] &7| &f/revive bed [team] [arena] &7| &f/revive set <player> <team> [bed|nobed] [arena] &7| &f/revive eliminate <player> &7| &f/revive teams [arena]"
   reloaded: "Configuration reloaded."
   no-arena: "You are not in a game. Specify one: &f/revive <team> [bed|nobed] <arena> &7(running: &f{arenas}&7)"
   unknown-arena: "&cNo arena called &f{arena}&c."
@@ -37,7 +34,7 @@ messages:
   in-other-arena: "&cYou are in a different game. Leave it first."
   outsiders-disabled: "&cJoining a game you were not part of is disabled."
   no-outsider-permission: "&cYou don't have permission to join a game you were not part of."
-  switch-disabled: "&cYou can't switch teams while alive."
+  switch-disabled: "&cYou don't have permission to switch teams while alive."
   respawning: "&cYou are already respawning, hold on."
   already-on-team: "&cYou are already alive on that team."
   spectate-failed: "&cThe game refused to let you in."
@@ -55,4 +52,14 @@ messages:
   team-line: "{team}&7: &f{members} player(s) &7- bed {bed}"
   bed-alive: "&aalive"
   bed-dead: "&cdestroyed"
+  bed-recreated: "&aThe bed of team {team}&a has been recreated."
+  bed-already-intact: "&7The bed of team {team}&7 is already intact."
+  bed-other-no-permission: "&cYou can only recreate your own team's bed."
+  bed-needs-team: "&cYou are not on a team. Specify one: &f/revive bed <team> [arena]"
+  player-not-found: "&cPlayer &f{player}&c is not online."
+  target-not-alive: "&cThat player isn't alive in a running game."
+  eliminated: "&a{player} &7is now a dead spectator."
+  eliminated-target: "&cYou were put into spectator mode by an administrator."
+  moved-by-admin: "&eAn administrator put you on team {team}&e."
+  admin-moved: "&a{player} &7is now on team {team}&7."
   teams-header: "&7Teams in &f{arena}&7:"

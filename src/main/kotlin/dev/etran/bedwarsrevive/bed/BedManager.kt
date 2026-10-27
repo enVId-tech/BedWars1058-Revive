@@ -5,12 +5,14 @@ import com.andrei1058.bedwars.api.arena.IArena
 import com.andrei1058.bedwars.api.arena.team.ITeam
 import com.andrei1058.bedwars.api.events.gameplay.GameStateChangeEvent
 import dev.etran.bedwarsrevive.BedWarsRevive
+import org.bukkit.Material
 import org.bukkit.block.Block
+import org.bukkit.block.BlockFace
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import java.util.UUID
 
-enum class BedRestoreResult { RESTORED, NO_SNAPSHOT, FAILED }
+enum class BedRestoreResult { RESTORED, CREATED, NO_SNAPSHOT, FAILED }
 
 /**
  * Remembers what every team's bed looked like when the match started, so it can be put back
@@ -76,9 +78,25 @@ class BedManager(private val plugin: BedWarsRevive) : Listener {
 
     // ---------------------------------------------------------------- restore
 
-    /** Puts the bed back where it was at the start of the match. Does not touch the team's bed flag. */
+    /**
+     * Puts the team's bed on the map. Uses the match-start snapshot when there is one; otherwise
+     * (the team had no bed at the start, or the plugin was installed mid-game) a new bed is built
+     * at the team's configured bed location in the team's colour.
+     * Does not touch the team's bed flag.
+     */
     fun restore(arena: IArena, team: ITeam): BedRestoreResult {
-        val snapshot = snapshots[arena.arenaName]?.get(team.identity) ?: return BedRestoreResult.NO_SNAPSHOT
+        val perTeam = snapshots.getOrPut(arena.arenaName) { HashMap() }
+        var snapshot = perTeam[team.identity]
+        var created = false
+        if (snapshot == null) {
+            snapshot = try {
+                plan(team)
+            } catch (t: Throwable) {
+                plugin.logger.warning("Could not plan a new bed for ${team.name} in ${arena.arenaName}: $t")
+                null
+            } ?: return BedRestoreResult.NO_SNAPSHOT
+            created = true
+        }
         return try {
             for (piece in snapshot.pieces) {
                 val block = piece.block()
@@ -89,12 +107,44 @@ class BedManager(private val plugin: BedWarsRevive) : Listener {
                 } catch (_: Throwable) {
                 }
             }
+            if (created) perTeam[team.identity] = snapshot // later restores reuse the same layout
             if (plugin.config.getBoolean("recolor-bed", true)) recolor(team)
-            BedRestoreResult.RESTORED
+            if (created) BedRestoreResult.CREATED else BedRestoreResult.RESTORED
         } catch (t: Throwable) {
             plugin.logger.warning("Failed to restore the bed of ${team.name} in ${arena.arenaName}: $t")
             BedRestoreResult.FAILED
         }
+    }
+
+    /**
+     * Designs a bed for a team that has no snapshot: the configured bed block is the foot, the head
+     * goes on the neighbouring block that is free, has ground under it and is closest to the team spawn.
+     */
+    private fun plan(team: ITeam): Snapshot? {
+        val foot = team.bed?.block ?: return null
+        val spawn = team.spawn
+        val faces = listOf(BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST)
+
+        fun free(b: Block) = b.type == Material.AIR || !b.type.isSolid
+        fun ground(b: Block) = b.getRelative(BlockFace.DOWN).type.isSolid
+
+        val facing = faces.maxByOrNull { f ->
+            val head = foot.getRelative(f)
+            var score = 0.0
+            if (free(head)) score += 100
+            if (ground(head)) score += 10
+            if (spawn != null && spawn.world == head.world) score -= head.location.distanceSquared(spawn) / 1_000_000.0
+            score
+        } ?: return null
+        val head = foot.getRelative(facing)
+
+        val material = team.color.bedMaterial()
+        return Snapshot(
+            listOf(
+                Piece(foot.world, foot.x, foot.y, foot.z, adapter.create(material, false, facing)),
+                Piece(head.world, head.x, head.y, head.z, adapter.create(material, true, facing))
+            )
+        )
     }
 
     private fun recolor(team: ITeam) {

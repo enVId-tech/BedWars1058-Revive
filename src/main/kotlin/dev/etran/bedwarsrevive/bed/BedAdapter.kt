@@ -18,6 +18,9 @@ interface BedAdapter {
     fun read(block: Block): BedPiece?
     fun write(block: Block, state: Any)
 
+    /** Builds the state for a brand-new bed half (used when no snapshot of the bed exists). */
+    fun create(material: Material, isHead: Boolean, facing: BlockFace): Any
+
     companion object {
         /** Block data (flattening) exists from 1.13 onwards. */
         fun create(): BedAdapter {
@@ -60,6 +63,18 @@ class LegacyBedAdapter : BedAdapter {
         val s = state as State
         block.setTypeIdAndData(s.typeId, s.data, false)
     }
+
+    override fun create(material: Material, isHead: Boolean, facing: BlockFace): Any {
+        val bits = when (facing) {
+            BlockFace.SOUTH -> 0
+            BlockFace.WEST -> 1
+            BlockFace.NORTH -> 2
+            else -> 3
+        }
+        // BedWars1058 returns BED_BLOCK here on legacy servers; fall back to it if it ever doesn't.
+        val type = if (BedAdapter.isBedMaterial(material)) material else Material.valueOf("BED_BLOCK")
+        return State(type.id, (bits or (if (isHead) 8 else 0)).toByte())
+    }
 }
 
 /**
@@ -85,6 +100,10 @@ class ModernBedAdapter : BedAdapter {
         val facing = facingRegex.find(data)?.groupValues?.get(1) ?: return null
         return BedPiece(head == "head", BlockFace.valueOf(facing.uppercase()), data)
     }
+
+    override fun create(material: Material, isHead: Boolean, facing: BlockFace): Any =
+        "minecraft:${material.name.lowercase()}[facing=${facing.name.lowercase()}," +
+            "occupied=false,part=${if (isHead) "head" else "foot"}]"
 
     override fun write(block: Block, state: Any) {
         val data = createBlockData.invoke(null, state as String)

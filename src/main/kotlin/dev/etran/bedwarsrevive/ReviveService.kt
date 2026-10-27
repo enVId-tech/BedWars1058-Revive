@@ -14,7 +14,7 @@ class ReviveFailure(val key: String, vararg val placeholders: Pair<String, Strin
 
 enum class ReviveKind { REVIVED, SWITCHED, BED_ONLY }
 
-enum class BedOutcome { NOT_REQUESTED, NO_PERMISSION, ALREADY_INTACT, RESTORED, NO_SNAPSHOT, FAILED }
+enum class BedOutcome { NOT_REQUESTED, NO_PERMISSION, ALREADY_INTACT, RESTORED, CREATED, NO_SNAPSHOT, FAILED }
 
 class ReviveResult(val kind: ReviveKind, val bed: BedOutcome)
 
@@ -166,14 +166,16 @@ class ReviveService(private val plugin: BedWarsRevive) {
     fun restoreBed(arena: IArena, team: ITeam, force: Boolean): BedOutcome {
         if (arena.status != GameState.playing) throw ReviveFailure("arena-not-playing")
         if (!force && !team.isBedDestroyed) return BedOutcome.ALREADY_INTACT
-        return when (plugin.beds.restore(arena, team)) {
-            BedRestoreResult.RESTORED -> {
+        val result = plugin.beds.restore(arena, team)
+        return when (result) {
+            BedRestoreResult.RESTORED, BedRestoreResult.CREATED -> {
+                val created = result == BedRestoreResult.CREATED
                 team.isBedDestroyed = false
                 try {
                     api.scoreboardManager.refreshPlaceholders(arena)
                 } catch (_: Throwable) {
                 }
-                BedOutcome.RESTORED
+                if (created) BedOutcome.CREATED else BedOutcome.RESTORED
             }
             BedRestoreResult.NO_SNAPSHOT -> BedOutcome.NO_SNAPSHOT
             BedRestoreResult.FAILED -> BedOutcome.FAILED

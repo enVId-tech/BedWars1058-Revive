@@ -89,7 +89,7 @@ class ReviveCommand(private val plugin: BedWarsRevive) : CommandExecutor, TabCom
         try {
             // Admins re-place the bed even when it still stands; everyone else only when it's gone.
             when (plugin.service.restoreBed(arena, team, force = any)) {
-                BedOutcome.RESTORED -> msg.send(sender, "bed-recreated", "team" to label)
+                BedOutcome.RESTORED, BedOutcome.CREATED -> msg.send(sender, "bed-recreated", "team" to label)
                 BedOutcome.ALREADY_INTACT -> msg.send(sender, "bed-already-intact", "team" to label)
                 BedOutcome.NO_SNAPSHOT -> msg.send(sender, "bed-no-snapshot")
                 else -> msg.send(sender, "bed-failed")
@@ -160,7 +160,7 @@ class ReviveCommand(private val plugin: BedWarsRevive) : CommandExecutor, TabCom
             msg.send(target, "moved-by-admin", "team" to label)
         }
         when (result.bed) {
-            BedOutcome.RESTORED -> if (result.kind != ReviveKind.BED_ONLY) msg.send(target, "bed-restored")
+            BedOutcome.RESTORED, BedOutcome.CREATED -> if (result.kind != ReviveKind.BED_ONLY) msg.send(target, "bed-restored")
             BedOutcome.NO_PERMISSION -> msg.send(target, "bed-no-permission")
             BedOutcome.ALREADY_INTACT -> msg.send(actor, "bed-intact")
             BedOutcome.NO_SNAPSHOT -> msg.send(actor, "bed-no-snapshot")

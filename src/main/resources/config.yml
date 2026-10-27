@@ -42,7 +42,7 @@ messages:
   bed-no-permission: "&eYou lack the permission to restore beds, so you joined without one."
   bed-intact: "&7(That team's bed is still intact.)"
   bed-restored: "&aThe team's bed has been restored."
-  bed-no-snapshot: "&eThe bed could not be restored (no record of it from the start of the match)."
+  bed-no-snapshot: "&eThe bed could not be built (this team has no bed location configured)."
   bed-failed: "&eThe bed could not be restored."
   revived: "&aYou joined team {team}&a."
   switched: "&aYou switched to team {team}&a."

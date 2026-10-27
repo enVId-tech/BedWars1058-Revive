@@ -141,37 +141,38 @@ class ReviveCommand(private val plugin: BedWarsRevive) : CommandExecutor, TabCom
         actor: CommandSender, target: Player, arena: IArena, team: ITeam,
         wantBed: Boolean, mayBed: Boolean, maySwitch: Boolean
     ) {
-        val result = try {
-            plugin.service.revive(target, arena, team, wantBed, mayBed, maySwitch)
-        } catch (f: ReviveFailure) {
-            msg.send(actor, f.key, *f.placeholders, "arena" to arena.displayName, "teams" to teamNames(arena))
-            return
-        }
-
-        val label = coloredName(team)
-        if (actor === target) {
-            when (result.kind) {
-                ReviveKind.REVIVED -> msg.send(target, "revived", "team" to label)
-                ReviveKind.SWITCHED -> msg.send(target, "switched", "team" to label)
-                ReviveKind.BED_ONLY -> msg.send(target, "bed-only", "team" to label)
+        plugin.service.revive(target, arena, team, wantBed, mayBed, maySwitch) { result, failure ->
+            if (failure != null) {
+                msg.send(actor, failure.key, *failure.placeholders, "arena" to arena.displayName, "teams" to teamNames(arena))
+                return@revive
             }
-        } else {
-            msg.send(actor, "admin-moved", "player" to target.name, "team" to label)
-            msg.send(target, "moved-by-admin", "team" to label)
-        }
-        when (result.bed) {
-            BedOutcome.RESTORED, BedOutcome.CREATED -> if (result.kind != ReviveKind.BED_ONLY) msg.send(target, "bed-restored")
-            BedOutcome.NO_PERMISSION -> msg.send(target, "bed-no-permission")
-            BedOutcome.ALREADY_INTACT -> msg.send(actor, "bed-intact")
-            BedOutcome.NO_SNAPSHOT -> msg.send(actor, "bed-no-snapshot")
-            BedOutcome.FAILED -> msg.send(actor, "bed-failed")
-            BedOutcome.NOT_REQUESTED -> Unit
-        }
+            result!!
+            val label = coloredName(team)
+            if (actor === target) {
+                when (result.kind) {
+                    ReviveKind.REVIVED -> msg.send(target, "revived", "team" to label)
+                    ReviveKind.SWITCHED -> msg.send(target, "switched", "team" to label)
+                    ReviveKind.BED_ONLY -> msg.send(target, "bed-only", "team" to label)
+                }
+            } else {
+                msg.send(actor, "admin-moved", "player" to target.name, "team" to label)
+                msg.send(target, "moved-by-admin", "team" to label)
+            }
+            when (result.bed) {
+                BedOutcome.RESTORED, BedOutcome.CREATED ->
+                    if (result.kind != ReviveKind.BED_ONLY) msg.send(target, "bed-restored")
+                BedOutcome.NO_PERMISSION -> msg.send(target, "bed-no-permission")
+                BedOutcome.ALREADY_INTACT -> msg.send(actor, "bed-intact")
+                BedOutcome.NO_SNAPSHOT -> msg.send(actor, "bed-no-snapshot")
+                BedOutcome.FAILED -> msg.send(actor, "bed-failed")
+                BedOutcome.NOT_REQUESTED -> Unit
+            }
 
-        if (plugin.config.getBoolean("broadcast", true) && result.kind != ReviveKind.BED_ONLY) {
-            val key = if (result.kind == ReviveKind.SWITCHED) "broadcast-switched" else "broadcast-revived"
-            val text = msg.format(key, "player" to target.name, "team" to label)
-            for (p in arena.players + arena.spectators) p.sendMessage(text)
+            if (plugin.config.getBoolean("broadcast", true) && result.kind != ReviveKind.BED_ONLY) {
+                val key = if (result.kind == ReviveKind.SWITCHED) "broadcast-switched" else "broadcast-revived"
+                val text = msg.format(key, "player" to target.name, "team" to label)
+                for (p in arena.players + arena.spectators) p.sendMessage(text)
+            }
         }
     }
 

@@ -44,8 +44,10 @@ is running. `bed`, `set`, `eliminate` and `teams` also work from the console wit
 * **Alive on another team?** They switch, if they have `bwrevive.switch` (admins using `/revive set` always can).
 * **Beds are independent of players.** `/revive bed` needs no revival, and clears the team's
   "bed destroyed" state. The bed is rebuilt from a snapshot taken at the start of the match, so it
-  returns on the exact blocks, facing and colour it had. If the plugin was installed mid-game, teams
-  whose bed was already broken have no snapshot (the command says so).
+  returns on the exact blocks, facing and colour it had. If there is no snapshot (the team had no bed at
+  the start of the match, or the plugin was installed mid-game) a **new bed is built** at the team's
+  configured bed location, in the team's colour, with the head on a free neighbouring block closest to
+  the team spawn. That layout is then reused for later restores.
 * **Eliminate** removes the player from their team, makes them a dead spectator and re-checks the
   win condition, so eliminating the last member of a bedless team ends that team like a normal death.
 

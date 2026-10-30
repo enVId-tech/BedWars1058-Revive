@@ -124,6 +124,7 @@ class ReviveService(private val plugin: BedWarsRevive) {
                 }
                 restoreGeneratorsIfNeeded(team)
                 team.firstSpawn(player)
+                ensurePlayableState(player, arena)
 
                 // ---- bed: needs a member on the team, so it is placed after joining
                 if (bedWanted) {
@@ -329,6 +330,36 @@ class ReviveService(private val plugin: BedWarsRevive) {
             team.javaClass.getMethod("spawnGenerators").invoke(team)
         } catch (t: Throwable) {
             plugin.debug("spawnGenerators unavailable: $t")
+        }
+    }
+
+    /**
+     * Makes sure everything the shops and upgrade menus need exists for a player that is now on a team:
+     * BedWars1058's ShopCache + PlayerQuickBuyCache (normally created by its own join listeners; the item
+     * shop silently refuses to open without them) and entity collision (spectators have it switched off,
+     * and a non-colliding player can't click the shop NPCs).
+     */
+    private fun ensurePlayableState(player: Player, arena: IArena) {
+        try {
+            api.versionSupport.setCollide(player, arena, true)
+        } catch (t: Throwable) {
+            plugin.debug("setCollide: $t")
+        }
+        try {
+            val bw = plugin.server.pluginManager.getPlugin("BedWars1058") ?: return
+            val loader = bw.javaClass.classLoader
+            val shopCache = Class.forName("com.andrei1058.bedwars.shop.ShopCache", true, loader)
+            val quickBuy = Class.forName("com.andrei1058.bedwars.shop.quickbuy.PlayerQuickBuyCache", true, loader)
+            if (shopCache.getMethod("getShopCache", java.util.UUID::class.java).invoke(null, player.uniqueId) == null) {
+                plugin.logger.warning("${player.name} had no BedWars1058 shop cache after joining; creating it.")
+                shopCache.getConstructor(java.util.UUID::class.java).newInstance(player.uniqueId)
+            }
+            if (quickBuy.getMethod("getQuickBuyCache", java.util.UUID::class.java).invoke(null, player.uniqueId) == null) {
+                plugin.logger.warning("${player.name} had no BedWars1058 quick-buy cache after joining; creating it.")
+                quickBuy.getConstructor(Player::class.java).newInstance(player)
+            }
+        } catch (t: Throwable) {
+            plugin.logger.warning("Could not verify the shop state of ${player.name}: $t")
         }
     }
 
